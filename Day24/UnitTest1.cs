@@ -13,7 +13,7 @@ namespace Day24
     public class UnitTest1
     {
         //private readonly int[] inputs = new[] {1, 2, 3, 3};
-        //private readonly int[] inputs = new[] {1, 2, 3, 4, 5,   7, 8, 9, 10, 11};
+        private readonly int[] testInputs = new[] { 1, 2, 3, 4, 5, 7, 8, 9, 10, 11 };
         private readonly int[] inputs = File.ReadAllLines("input.txt").Select(int.Parse).ToArray();
         [TestMethod]
         public void RoundTripRepresentation()
@@ -29,79 +29,95 @@ namespace Day24
         }
 
         [TestMethod]
+        public void Example()
+        {
+            var sleigh = new Sleigh(testInputs);
+            sleigh.Distribute();
+            Assert.AreEqual(2, sleigh.BestCount);
+            Assert.AreEqual(99, Convert.ToInt32(sleigh.BestQe));
+        }
+
+        [TestMethod]
         public void Part1()
         {
             var sleigh = new Sleigh(inputs);
             sleigh.Distribute();
+            Console.Out.WriteLine(sleigh.BestCount);
+            Console.Out.WriteLine(sleigh.BestQe);
         }
     }
 
     public class Sleigh
     {
         public List<int> Weights { get; }
-        public List<List<int>> Bags = new List<List<int>>();
-        private List<int[][]> balancingCombinations = new List<int[][]>();
-        const int bagCount = 3;
+        public List<int> Bag = new List<int>();
+        private List<int[]> balancingCombinations = new List<int[]>();
         public Sleigh(int[] weights)
         {
-            Weights = weights.ToList();
-            for (int i = 0; i < bagCount; i++)
-            {
-                Bags.Add(new List<int>());
-            }
-            weightPerBag = weights.Sum() / bagCount;
+            Weights = weights.Reverse().ToList();
+
+            weightPerBag = weights.Sum() / 3;
         }
 
         private readonly Stack<int> bagsDistributedTo = new Stack<int>();
-        private int weightPerBag;
+        private readonly int weightPerBag;
 
-        public void Distribute()
-        {
-            Distribute(0, 0);
-        }
+        public int BestCount { get; private set; } = int.MaxValue;
+        public ulong BestQe { get; private set; } = ulong.MaxValue;
 
-        private int bestCount = int.MaxValue;
-        private ulong bestQe = ulong.MaxValue;
-        public bool Distribute(int lowerLimit, int lowerBag)
+        public bool Distribute()
         {
-            var count = Weights.Count;
-            if (Bags.Any(b => b.Sum() > weightPerBag)) return true;
+            var weightsBiggestFirst = Weights.OrderByDescending(w => w).ToArray();
+            var minPossibleBestCount = Array.FindIndex(weightsBiggestFirst, i => weightsBiggestFirst.Take(i).Sum() >= weightPerBag);
+
+            if (Bag.Sum() > weightPerBag) return true;
             //does the smallest bag already have a QE as high as our best?
-            var bagsInOrderOfSize = Bags.OrderBy(b => b.Count);
-            var smallestBag = bagsInOrderOfSize.First();
-            if (smallestBag.Count >= bestCount)
+            if (Bag.Count > BestCount) return true;
+            if (Bag.Count == BestCount)
             {
-                var qeOfSmallest = QE(smallestBag);
-                if (qeOfSmallest >= bestQe)
+                var qeOfSmallest = QE(Bag);
+                if (qeOfSmallest >= BestQe)
                     return true; //mark branch as degenerate
             }
-            if (Weights.Count == 0)
+            if (Bag.Sum() == weightPerBag)
             {
-                if (smallestBag.Count < bestCount) //been beaten, reset QE
-                    bestQe = ulong.MaxValue;
+                if (Bag.Count < BestCount) //been beaten, reset QE
+                    BestQe = ulong.MaxValue;
 
-                if (smallestBag.Count <= bestCount)
+                if (Bag.Count <= BestCount)
                 {
-                    bestCount = smallestBag.Count;
-                    var qe = QE(smallestBag);
-                    if (qe < bestQe) bestQe = qe;
+                    BestCount = Bag.Count;
+                    var qe = QE(Bag);
+                    if (qe < BestQe) BestQe = qe;
                 }
-                LogManager.GetCurrentClassLogger().Info($"{string.Join("     ", bagsInOrderOfSize.Select(i => string.Join(",", i.Select(n => n.ToString()))))}, bestCount = {bestCount}, bestQe = {bestQe}");
-                var item = bagsInOrderOfSize.Select(i => i.ToArray()).ToArray();
+                LogManager.GetCurrentClassLogger().Info($"{string.Join("     ", string.Join(",", Bag.Select(n => n.ToString())))}, bestCount = {BestCount}, bestQe = {BestQe}");
+                var item = Bag.ToArray();
                 balancingCombinations.Add(item);
+                return true;
             }
-            for (int index = lowerLimit; index < count; index++)
+
+
+            int[] weightsToDistribute;
+            /*
+                        var bagsThatCanTakeMultiple = Bags.Where(b => b.Count < BestCount - 1).ToArray();
+                        var bagsThatCanTakeOne = Bags.Where(b => b.Count == BestCount - 1).ToArray();
+            */
+            weightsToDistribute = Weights/*
+                .Where(w => bagsThatCanTakeMultiple.Any(b => b.Sum() + w <= weightPerBag)
+                            || bagsThatCanTakeOne.Any(b => b.Sum() + w == weightPerBag))
+                .OrderByDescending(w => Bags.Count(b => b.Sum() + w == weightPerBag))
+                .ThenByDescending(w => w)*/
+                .ToArray();
+            foreach (int w in weightsToDistribute)
             {
                 bool degenerate = false;
-                for (int bag = 0; bag < Bags.Count && !degenerate; bag++)
-                {
-                    var weight = Weights[index];
-                    Bags[bag].Add(weight);
-                    Weights.RemoveAt(index);
-                    bagsDistributedTo.Push(bag);
-                    degenerate = Bags.All(b => b.Count > bestCount) || Distribute(index, bag);
-                    Undo();
-                }
+                var weight = w;
+                Bag.Add(weight);
+                var actualIndex = Weights.IndexOf(weight);
+                Weights.RemoveAt(actualIndex);
+                degenerate = Distribute();
+                Undo();
+                if (degenerate) break;
             }
             return false;
         }
@@ -113,12 +129,8 @@ namespace Day24
 
         public void Undo()
         {
-            if (bagsDistributedTo.Count == 0) throw new InvalidOperationException("Nothing to undo");
-
-            var bagDistributedTo = bagsDistributedTo.Pop();
-            var bag = Bags[bagDistributedTo];
-            var weight = bag.Last();
-            bag.RemoveAt(bag.Count - 1);
+            var weight = Bag.Last();
+            Bag.RemoveAt(Bag.Count - 1);
             Weights.Add(weight);
         }
 
