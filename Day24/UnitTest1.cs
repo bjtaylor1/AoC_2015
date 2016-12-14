@@ -1,9 +1,11 @@
 ﻿using System;
 using System.CodeDom;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NLog;
 
 namespace Day24
 {
@@ -11,8 +13,8 @@ namespace Day24
     public class UnitTest1
     {
         //private readonly int[] inputs = new[] {1, 2, 3, 3};
-        private readonly int[] inputs = new[] {1, 2, 3, 4, 5,   7, 8, 9, 10, 11};
-        //private readonly int[] inputs = File.ReadAllLines("input.txt").Select(int.Parse).ToArray();
+        //private readonly int[] inputs = new[] {1, 2, 3, 4, 5,   7, 8, 9, 10, 11};
+        private readonly int[] inputs = File.ReadAllLines("input.txt").Select(int.Parse).ToArray();
         [TestMethod]
         public void RoundTripRepresentation()
         {
@@ -47,7 +49,7 @@ namespace Day24
             {
                 Bags.Add(new List<int>());
             }
-            weightPerBag = weights.Sum()/bagCount;
+            weightPerBag = weights.Sum() / bagCount;
         }
 
         private readonly Stack<int> bagsDistributedTo = new Stack<int>();
@@ -58,33 +60,60 @@ namespace Day24
             Distribute(0, 0);
         }
 
+        private int bestCount = int.MaxValue;
+        private ulong bestQe = ulong.MaxValue;
         public bool Distribute(int lowerLimit, int lowerBag)
         {
             var count = Weights.Count;
             if (Bags.Any(b => b.Sum() > weightPerBag)) return true;
+            //does the smallest bag already have a QE as high as our best?
+            var bagsInOrderOfSize = Bags.OrderBy(b => b.Count);
+            var smallestBag = bagsInOrderOfSize.First();
+            if (smallestBag.Count >= bestCount)
+            {
+                var qeOfSmallest = QE(smallestBag);
+                if (qeOfSmallest >= bestQe)
+                    return true; //mark branch as degenerate
+            }
             if (Weights.Count == 0)
             {
-                balancingCombinations.Add(Bags.Select(b => b.ToArray()).ToArray());
+                if (smallestBag.Count < bestCount) //been beaten, reset QE
+                    bestQe = ulong.MaxValue;
+
+                if (smallestBag.Count <= bestCount)
+                {
+                    bestCount = smallestBag.Count;
+                    var qe = QE(smallestBag);
+                    if (qe < bestQe) bestQe = qe;
+                }
+                LogManager.GetCurrentClassLogger().Info($"{string.Join("     ", bagsInOrderOfSize.Select(i => string.Join(",", i.Select(n => n.ToString()))))}, bestCount = {bestCount}, bestQe = {bestQe}");
+                var item = bagsInOrderOfSize.Select(i => i.ToArray()).ToArray();
+                balancingCombinations.Add(item);
             }
             for (int index = lowerLimit; index < count; index++)
             {
-                bool overLimit = false;
-                for (int bag = 0; bag < Bags.Count && !overLimit; bag++)
+                bool degenerate = false;
+                for (int bag = 0; bag < Bags.Count && !degenerate; bag++)
                 {
                     var weight = Weights[index];
                     Bags[bag].Add(weight);
                     Weights.RemoveAt(index);
                     bagsDistributedTo.Push(bag);
-                    overLimit = Distribute(index, bag);
+                    degenerate = Bags.All(b => b.Count > bestCount) || Distribute(index, bag);
                     Undo();
                 }
             }
             return false;
         }
 
+        private static ulong QE(IEnumerable<int> ints)
+        {
+            return ints.Aggregate((ulong)1, (c, i) => c * (ulong)i);
+        }
+
         public void Undo()
         {
-            if(bagsDistributedTo.Count == 0) throw new InvalidOperationException("Nothing to undo");
+            if (bagsDistributedTo.Count == 0) throw new InvalidOperationException("Nothing to undo");
 
             var bagDistributedTo = bagsDistributedTo.Pop();
             var bag = Bags[bagDistributedTo];
