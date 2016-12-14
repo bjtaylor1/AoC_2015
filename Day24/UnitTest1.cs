@@ -29,18 +29,27 @@ namespace Day24
         }
 
         [TestMethod]
-        public void Example()
+        public void Part1Example()
         {
-            var sleigh = new Sleigh(testInputs);
+            var sleigh = new Sleigh(testInputs, 3);
             sleigh.Distribute();
             Assert.AreEqual(2, sleigh.BestCount);
             Assert.AreEqual(99, Convert.ToInt32(sleigh.BestQe));
         }
 
         [TestMethod]
+        public void Part2Example()
+        {
+            var sleigh = new Sleigh(testInputs, 4);
+            sleigh.Distribute();
+            Assert.AreEqual(2, sleigh.BestCount);
+            Assert.AreEqual(44, Convert.ToInt32(sleigh.BestQe));
+        }
+
+        [TestMethod]
         public void Part1()
         {
-            var sleigh = new Sleigh(inputs);
+            var sleigh = new Sleigh(inputs, 3);
             sleigh.Distribute();
             Console.Out.WriteLine(sleigh.BestCount);
             Console.Out.WriteLine(sleigh.BestQe);
@@ -52,11 +61,11 @@ namespace Day24
         public List<int> Weights { get; }
         public List<int> Bag = new List<int>();
         private List<int[]> balancingCombinations = new List<int[]>();
-        public Sleigh(int[] weights)
+        public Sleigh(int[] weights, int numBags)
         {
             Weights = weights.Reverse().ToList();
 
-            weightPerBag = weights.Sum() / 3;
+            weightPerBag = weights.Sum() / numBags;
         }
 
         private readonly Stack<int> bagsDistributedTo = new Stack<int>();
@@ -67,9 +76,6 @@ namespace Day24
 
         public bool Distribute()
         {
-            var weightsBiggestFirst = Weights.OrderByDescending(w => w).ToArray();
-            var minPossibleBestCount = Array.FindIndex(weightsBiggestFirst, i => weightsBiggestFirst.Take(i).Sum() >= weightPerBag);
-
             if (Bag.Sum() > weightPerBag) return true;
             //does the smallest bag already have a QE as high as our best?
             if (Bag.Count > BestCount) return true;
@@ -98,16 +104,11 @@ namespace Day24
 
 
             int[] weightsToDistribute;
-            /*
-                        var bagsThatCanTakeMultiple = Bags.Where(b => b.Count < BestCount - 1).ToArray();
-                        var bagsThatCanTakeOne = Bags.Where(b => b.Count == BestCount - 1).ToArray();
-            */
-            weightsToDistribute = Weights/*
-                .Where(w => bagsThatCanTakeMultiple.Any(b => b.Sum() + w <= weightPerBag)
-                            || bagsThatCanTakeOne.Any(b => b.Sum() + w == weightPerBag))
-                .OrderByDescending(w => Bags.Count(b => b.Sum() + w == weightPerBag))
-                .ThenByDescending(w => w)*/
-                .ToArray();
+
+            if (Bag.Count == BestCount - 1)
+                weightsToDistribute = Weights.Where(w => w == weightPerBag - Bag.Sum()).ToArray();
+            else
+                weightsToDistribute = Weights.ToArray();
             foreach (int w in weightsToDistribute)
             {
                 bool degenerate = false;
