@@ -86,7 +86,7 @@ namespace Day19DotNet
             int cost;
             var minSteps = m.GetStepsToMakeMoleculeFrom("e", out cost);
             Console.Out.WriteLine(minSteps);
-
+            Console.Out.WriteLine($"Cost = {cost}");
         }
     }
 
@@ -116,26 +116,45 @@ namespace Day19DotNet
             return stepsToTarget;
         }
 
+        private int cycle;
         private int Transform(List<Iteration> paths, ref int cost)
         {
             Iteration target;
             while ((target = paths.FirstOrDefault(t => t.Value == "e")) == null)
             {
-                var bestIteration = paths.Where(i => !i.Visited)
-                    .OrderBy(i => i.Value.Length)
-                    .ThenBy(i => i.Depth).FirstOrDefault();
-                LogManager.GetCurrentClassLogger().Info(bestIteration);
-
-                if (bestIteration == null) throw new InvalidOperationException("Dead end!");
+                cycle++;
+                paths.Sort((i1, i2) =>
+                {
+                    var vis = i1.Visited.CompareTo(i2.Visited); //unvisited first
+                    if (vis != 0) return vis;
+                    var res = i1.Value.Length.CompareTo(i2.Value.Length); //short first
+                    if (res != 0) return res;
+                    return i1.Depth.CompareTo(i2.Depth);
+                });
+                var bestIteration = paths.First();
+                if(bestIteration.Visited) throw new InvalidOperationException("No unvisited paths");
+                LogManager.GetCurrentClassLogger().Info($"{cycle} : {bestIteration}");
 
                 cost++;
-                var newMolecules = GetDistinctMolecules(bestIteration.Value)
+                var newMolecules = GetDistinctMolecules(bestIteration)
                     .Select(s => new Iteration(s, bestIteration.Depth + 1))
                     .ToArray();
-                paths.RemoveAll(i => newMolecules.Any(n => n.Depth < i.Depth && n.Value == i.Value));//prune any that are the same but can be got to quicker
+                paths.RemoveAll(i => newMolecules.Any(n =>
+                {
+                    var b = n.Depth < i.Depth && n.Value == i.Value;
+                    if (b && i.Value == "CRnSiRnFYCaRnFArArFArThCaCaRnFAr") LogManager.GetCurrentClassLogger().Warn($"Removing {i} - because a better one is {n}");
+                    return b;
+                }));//prune any that are the same but can be got to quicker
+
+                var path10210 = paths.Where(p => p.Id == 10210 || p.Id == 10216).ToArray();
                 var newMoleculesToAdd = newMolecules.Where(n => !paths.Any(p => p.Value == n.Value)).ToArray();
+
+                foreach (var cyclicElement in newMoleculesToAdd.Where(i => i.Value == "CRnSiRnFYCaRnFArArFArThCaCaRnFAr"))
+                {
+                    LogManager.GetCurrentClassLogger().Warn($"{cycle}: Adding cyclic element {cyclicElement}");
+                }
                 paths.AddRange(newMoleculesToAdd);
-                bestIteration.Visited = true;
+
             }
             LogManager.GetCurrentClassLogger().Info(target);
             return target.Depth;
@@ -146,8 +165,26 @@ namespace Day19DotNet
             return GetDistinctMolecules(molecule);
         }
 
+        private List<Iteration> searched = new List<Iteration>();
+        private string[] GetDistinctMolecules(Iteration iteration)
+        {
+            if (iteration.Value == "CRnSiRnFYCaRnFArArFArThCaCaRnFAr")
+            {
+                LogManager.GetCurrentClassLogger().Warn($"Processing cyclic element {iteration}");
+            }
+            var alreadySearched = searched.Where(i => i.Value == iteration.Value);
+            if (alreadySearched.Any())
+            {
+                throw new InvalidOperationException($"Already searched {iteration}");
+            }
+            searched.Add(iteration);
+            iteration.Visited = true;
+            return GetDistinctMolecules(iteration.Value);
+        }
+
         private string[] GetDistinctMolecules(string thisMolecule)
         {
+            
             var molecules = new List<string>();
 
             foreach (var replacement in replacements)
@@ -175,7 +212,7 @@ namespace Day19DotNet
     {
         public override string ToString()
         {
-            return $"{Depth}: {Value}";
+            return $"Depth: {Depth}: Id: {Id}, {Value}";
         }
 
         public Iteration(string value, int depth)
@@ -184,6 +221,8 @@ namespace Day19DotNet
             Depth = depth;
         }
 
+        private static int nextId;
+        public int Id { get; } = nextId++;
         public string Value { get; }
         public int Depth { get; }
         public bool Visited { get; set; } = false;
