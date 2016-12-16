@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NLog;
 using NUnit.Framework;
 using Assert = NUnit.Framework.Assert;
 using CollectionAssert = NUnit.Framework.CollectionAssert;
@@ -26,10 +26,10 @@ namespace Day19DotNet
         [Test]
         public void Example1()
         {
-            var m =new Molecule(new []
+            var m = new Molecule(new[]
             {
-                "H => HO", 
-                "H => OH", 
+                "H => HO",
+                "H => OH",
                 "O => HH",
                 "HOH"
             });
@@ -45,10 +45,10 @@ namespace Day19DotNet
         [Test]
         public void Example2()
         {
-            var m =new Molecule(new []
+            var m = new Molecule(new[]
             {
-                "H => HO", 
-                "H => OH", 
+                "H => HO",
+                "H => OH",
                 "O => HH",
                 "HOHOHO"
             });
@@ -68,13 +68,25 @@ namespace Day19DotNet
                 "H => HO",
                 "H => OH",
                 "O => HH",
-                "HOH"
-            });
+                target
+            }, true);
             int cost;
             var minSteps = m.GetStepsToMakeMoleculeFrom("e", out cost);
 
-            Assert.AreEqual(3, minSteps);
+            Assert.AreEqual(steps, minSteps);
             Console.Out.WriteLine($"Cost = {cost}");
+        }
+
+        [Test]
+        public void Part2()
+        {
+
+            var lines = File.ReadAllLines($"{TestContext.CurrentContext.TestDirectory}\\input.txt").Where(s => !string.IsNullOrEmpty(s)).ToArray();
+            var m = new Molecule(lines, true);
+            int cost;
+            var minSteps = m.GetStepsToMakeMoleculeFrom("e", out cost);
+            Console.Out.WriteLine(minSteps);
+
         }
     }
 
@@ -84,42 +96,49 @@ namespace Day19DotNet
         private readonly Replacement[] replacements;
         private readonly string molecule;
 
-        public Molecule(string[] lines)
+        public Molecule(string[] lines, bool backwards = false)
         {
             var replacementMatches = lines.Take(lines.Length - 1)
                 .Select(s => replacementRegex.Match(s)).ToArray();
             molecule = lines.Last();
             if (!replacementMatches.All(s => s.Success)) throw new InvalidOperationException("Invalid replacements");
-            replacements = replacementMatches.Select(m => new Replacement(m.Groups[1].Value, m.Groups[2].Value)).ToArray();
+            if (backwards)
+                replacements = replacementMatches.Select(m => new Replacement(m.Groups[2].Value, m.Groups[1].Value)).ToArray();
+            else
+                replacements = replacementMatches.Select(m => new Replacement(m.Groups[1].Value, m.Groups[2].Value)).ToArray();
         }
 
         public int GetStepsToMakeMoleculeFrom(string initial, out int cost)
         {
-            var paths = new List<int>();
+            var paths = new List<Iteration> { new Iteration(molecule, 0) };
             cost = 0;
-            Transform(initial, 1, paths, ref cost);
-            return paths.Min();
+            var stepsToTarget = Transform(paths, ref cost);
+            return stepsToTarget;
         }
 
-        private const int STOP = -1;
-        private const int CONTINUE = -2;
-        private int Transform(string current, int depth, List<int> paths, ref int cost )
+        private int Transform(List<Iteration> paths, ref int cost)
         {
-            var distinctMolecules = GetDistinctMolecules(current);
-            cost++;
-            foreach(var newMolecule in distinctMolecules)
+            Iteration target;
+            while ((target = paths.FirstOrDefault(t => t.Value == "e")) == null)
             {
-                if (newMolecule == molecule)
-                {
-                    paths.Add(depth);
-                }
-                else if (newMolecule.Length <= molecule.Length)
-                {
-                    var res = Transform(newMolecule, depth + 1, paths, ref cost);
-                    if (res == STOP) return STOP;
-                }
+                var bestIteration = paths.Where(i => !i.Visited)
+                    .OrderBy(i => i.Value.Length)
+                    .ThenBy(i => i.Depth).FirstOrDefault();
+                LogManager.GetCurrentClassLogger().Info(bestIteration);
+
+                if (bestIteration == null) throw new InvalidOperationException("Dead end!");
+
+                cost++;
+                var newMolecules = GetDistinctMolecules(bestIteration.Value)
+                    .Select(s => new Iteration(s, bestIteration.Depth + 1))
+                    .ToArray();
+                paths.RemoveAll(i => newMolecules.Any(n => n.Depth < i.Depth && n.Value == i.Value));//prune any that are the same but can be got to quicker
+                var newMoleculesToAdd = newMolecules.Where(n => !paths.Any(p => p.Value == n.Value)).ToArray();
+                paths.AddRange(newMoleculesToAdd);
+                bestIteration.Visited = true;
             }
-            return CONTINUE;
+            LogManager.GetCurrentClassLogger().Info(target);
+            return target.Depth;
         }
 
         public string[] GetDistinctMolecules()
@@ -149,6 +168,54 @@ namespace Day19DotNet
                 }
             }
             return molecules.ToArray();
+        }
+    }
+
+    public class Iteration : IEquatable<Iteration>
+    {
+        public override string ToString()
+        {
+            return $"{Depth}: {Value}";
+        }
+
+        public Iteration(string value, int depth)
+        {
+            Value = value;
+            Depth = depth;
+        }
+
+        public string Value { get; }
+        public int Depth { get; }
+        public bool Visited { get; set; } = false;
+
+        public bool Equals(Iteration other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return string.Equals(Value, other.Value);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Iteration) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Value != null ? Value.GetHashCode() : 0);
+        }
+
+        public static bool operator ==(Iteration left, Iteration right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(Iteration left, Iteration right)
+        {
+            return !Equals(left, right);
         }
     }
 
