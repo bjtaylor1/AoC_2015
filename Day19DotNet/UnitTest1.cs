@@ -132,27 +132,17 @@ namespace Day19DotNet
                     return i1.Depth.CompareTo(i2.Depth);
                 });
                 var bestIteration = paths.First();
-                if(bestIteration.Visited) throw new InvalidOperationException("No unvisited paths");
-                LogManager.GetCurrentClassLogger().Info($"{cycle} : {bestIteration}");
+                if(bestIteration.Visited) throw new InvalidOperationException($"Already visited {bestIteration}");
+                if(cycle % 1000 == 0) LogManager.GetCurrentClassLogger().Info($"Cycle: {cycle}, {bestIteration}");
 
                 cost++;
                 var newMolecules = GetDistinctMolecules(bestIteration)
                     .Select(s => new Iteration(s, bestIteration.Depth + 1))
                     .ToArray();
-                paths.RemoveAll(i => newMolecules.Any(n =>
-                {
-                    var b = n.Depth < i.Depth && n.Value == i.Value;
-                    if (b && i.Value == "CRnSiRnFYCaRnFArArFArThCaCaRnFAr") LogManager.GetCurrentClassLogger().Warn($"Removing {i} - because a better one is {n}");
-                    return b;
-                }));//prune any that are the same but can be got to quicker
+                paths.RemoveAll(i => newMolecules.Any(n => n.Depth < i.Depth && n.Value == i.Value));//prune any that are the same but can be got to quicker
 
-                var path10210 = paths.Where(p => p.Id == 10210 || p.Id == 10216).ToArray();
                 var newMoleculesToAdd = newMolecules.Where(n => !paths.Any(p => p.Value == n.Value)).ToArray();
 
-                foreach (var cyclicElement in newMoleculesToAdd.Where(i => i.Value == "CRnSiRnFYCaRnFArArFArThCaCaRnFAr"))
-                {
-                    LogManager.GetCurrentClassLogger().Warn($"{cycle}: Adding cyclic element {cyclicElement}");
-                }
                 paths.AddRange(newMoleculesToAdd);
 
             }
