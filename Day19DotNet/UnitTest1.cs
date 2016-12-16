@@ -127,13 +127,18 @@ namespace Day19DotNet
                 {
                     var vis = i1.Visited.CompareTo(i2.Visited); //unvisited first
                     if (vis != 0) return vis;
+
                     var res = i1.Value.Length.CompareTo(i2.Value.Length); //short first
                     if (res != 0) return res;
+
+                    var score = GetReducability(i1).CompareTo(GetReducability(i2));
+                    if (score != 0) return score;
+
                     return i1.Depth.CompareTo(i2.Depth);
                 });
                 var bestIteration = paths.First();
                 if(bestIteration.Visited) throw new InvalidOperationException($"Already visited {bestIteration}");
-                if(cycle % 1000 == 0) LogManager.GetCurrentClassLogger().Info($"Cycle: {cycle}, {bestIteration}");
+                if(cycle % 10 == 0) LogManager.GetCurrentClassLogger().Info($"Cycle: {cycle}, {bestIteration}");
 
                 cost++;
                 var newMolecules = GetDistinctMolecules(bestIteration)
@@ -148,6 +153,13 @@ namespace Day19DotNet
             }
             LogManager.GetCurrentClassLogger().Info(target);
             return target.Depth;
+        }
+
+        private int GetReducability(Iteration i)
+        {
+            var activeReplacements = replacements.Where(r => r.Regex.IsMatch(i.Value)).ToArray();
+            var reducability = activeReplacements.Sum(r => r.Score);
+            return reducability;
         }
 
         public string[] GetDistinctMolecules()
@@ -254,8 +266,10 @@ namespace Day19DotNet
         {
             Regex = new Regex(pattern, RegexOptions.Compiled);
             ReplaceWith = replaceWith;
+            Score = replaceWith.Length - pattern.Length;
         }
 
+        public int Score { get; }
         public Regex Regex { get; }
         public string ReplaceWith { get; }
     }
