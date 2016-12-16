@@ -54,13 +54,21 @@ namespace Day24
             Console.Out.WriteLine(sleigh.BestCount);
             Console.Out.WriteLine(sleigh.BestQe);
         }
+
+        [TestMethod]
+        public void Part2()
+        {
+            var sleigh = new Sleigh(inputs, 4);
+            sleigh.Distribute();
+            Console.Out.WriteLine(sleigh.BestCount);
+            Console.Out.WriteLine(sleigh.BestQe);
+        }
     }
 
     public class Sleigh
     {
         public List<int> Weights { get; }
         public List<int> Bag = new List<int>();
-        private List<int[]> balancingCombinations = new List<int[]>();
         public Sleigh(int[] weights, int numBags)
         {
             Weights = weights.Reverse().ToList();
@@ -68,7 +76,6 @@ namespace Day24
             weightPerBag = weights.Sum() / numBags;
         }
 
-        private readonly Stack<int> bagsDistributedTo = new Stack<int>();
         private readonly int weightPerBag;
 
         public int BestCount { get; private set; } = int.MaxValue;
@@ -98,7 +105,6 @@ namespace Day24
                 }
                 LogManager.GetCurrentClassLogger().Info($"{string.Join("     ", string.Join(",", Bag.Select(n => n.ToString())))}, bestCount = {BestCount}, bestQe = {BestQe}");
                 var item = Bag.ToArray();
-                balancingCombinations.Add(item);
                 return true;
             }
 
