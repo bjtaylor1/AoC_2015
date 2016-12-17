@@ -6,9 +6,14 @@
 class c
 {
 public:
-	std::string s;
-	int i;
+	const std::string  s;
+	const int i ;
 	c(const int _i , const std::string _s) : i(_i) , s(_s) {}
+	c& operator=(const c& rhs) 
+	{
+		return c(rhs.i, rhs.s);
+	}
+
 	bool operator<(const  c& other) //(1)
 	{
 		if (i != other.i) return i < other.i;
