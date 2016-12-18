@@ -149,13 +149,19 @@ public:
 	}
 
 
-	static int get_reducability_of_expansions(const vector<string>& expansions)
+	static int get_reducability(const vector<string>& expansions, const int length)
 	{
-		return 0;
+		//minus is good
+		int reducability = 0;
+		for (vector<string>::const_iterator it = expansions.begin(); it != expansions.end(); it++)
+		{
+			reducability += it->size() - length;
+		}
+		return reducability;
 	}
 
 	iteration(const string& _desc, const int _depth, const bool _visited) : desc(_desc), depth(_depth), visited(_visited), 
-		length(desc.size()), expansions(get_expansions(_desc)), reducability(get_reducability_of_expansions(expansions)) {}
+		length(desc.size()), expansions(get_expansions(_desc)), reducability(get_reducability(expansions, length)) {}
 
 	iteration(const string& _desc, const int _depth) : iteration(_desc, _depth, false) {}
 	const vector<iteration> expand()
@@ -169,25 +175,14 @@ public:
 		return its;
 	}
 
-	const int get_my_reducability() const
+	bool operator<(const iteration& rhs) //return true if lhs is better
 	{
-		int reducability = 0;
-		for (vector<reduction>::const_iterator it = reductions.begin(); it != reductions.end(); it++)
-		{
-			reducability += get_reducability(desc, *it);
-		}
-		return reducability;
+		if (length != rhs.length) return length < rhs.length;
+		return reducability < rhs.reducability;
 	}
-
 };
 
-bool compare(const iteration& lhs, const iteration& rhs) //return true if lhs is better
-{
-	if (lhs.length != rhs.length) return lhs.length < rhs.length;
-	int lhsreducability = lhs.get_my_reducability();
-	int rhsreducability = rhs.get_my_reducability();
-	return lhsreducability > rhsreducability;
-}
+
 
 int main()
 {
