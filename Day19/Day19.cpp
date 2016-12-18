@@ -5,38 +5,6 @@
 
 using namespace std;
 
-class c
-{
-public:
-	const string  s;
-	const int i;
-	c(const int _i, const string _s) : i(_i), s(_s) {}
-	c& operator=(const c& rhs)
-	{
-		return c(rhs.i, rhs.s);
-	}
-
-	bool operator<(const  c& other) //(1)
-	{
-		if (i != other.i) return i < other.i;
-		return s < other.s;
-	}
-};
-
-
-bool iThenS(const c& c1, const c& c2)
-{
-	if (c1.i != c2.i) return c1.i < c2.i;
-	return c1.s < c2.s;
-}
-
-
-ostream& operator<<(ostream& os, const c& c)
-{
-	os << c.i << "; " << c.s;
-	return os;
-}
-
 class reduction
 {
 public:
@@ -97,41 +65,31 @@ const vector<reduction> get_reductions()
 
 static vector<reduction> reductions = get_reductions();
 
-const vector<string> get_replacements(const string& input, const reduction& r)
-{
-	vector<string> replacements;
-	size_t start = 0;
-	const size_t findsize = r.find.size();
-	for (size_t pos = input.find(r.find); pos < input.size(); pos = input.find(r.find, pos + 1))
-	{
-		string replacement = input;
-		replacement.replace(pos, findsize, r.replacement);
-		replacements.push_back(replacement);
-	}
-	return replacements;
-}
-
-const int get_reducability(const string& input, const reduction& r)
-{
-	int reducability = 0;
-	size_t start = 0;
-	const size_t findsize = r.find.size();
-	for (size_t pos = input.find(r.find); pos < input.size(); pos = input.find(r.find, pos + 1))
-	{
-		reducability++;
-	}
-	return reducability;
-}
 
 class iteration
 {
 public:
-	const string desc;
-	const vector<string> expansions;
-	const int depth;
-	const int length;
+	string desc;
+	vector<string> expansions;
+	int depth;
+	int length;
 	bool visited;
-	const int reducability;
+	bool is_target;
+	int reducability;
+
+	static vector<string> get_replacements(const string& input, const reduction& r)
+	{
+		vector<string> replacements;
+		size_t start = 0;
+		const size_t findsize = r.find.size();
+		for (size_t pos = input.find(r.find); pos < input.size(); pos = input.find(r.find, pos + 1))
+		{
+			string replacement = input;
+			replacement.replace(pos, findsize, r.replacement);
+			replacements.push_back(replacement);
+		}
+		return replacements;
+	}
 
 	static vector<string> get_expansions(const string& desc)
 	{
@@ -160,12 +118,14 @@ public:
 		return reducability;
 	}
 
+	
 	iteration(const string& _desc, const int _depth, const bool _visited) : desc(_desc), depth(_depth), visited(_visited), 
-		length(desc.size()), expansions(get_expansions(_desc)), reducability(get_reducability(expansions, length)) {}
+		length(desc.size()), expansions(get_expansions(_desc)), reducability(get_reducability(expansions, length)), is_target(_desc == "e") {}
 
 	iteration(const string& _desc, const int _depth) : iteration(_desc, _depth, false) {}
-	const vector<iteration> expand()
+	vector<iteration> expand()
 	{
+		visited = true;
 		vector<iteration> its;
 		for (vector<string>::const_iterator it = expansions.begin(); it != expansions.end(); it++)
 		{
@@ -175,46 +135,56 @@ public:
 		return its;
 	}
 
+	
 	bool operator<(const iteration& rhs) //return true if lhs is better
 	{
-		if (length != rhs.length) return length < rhs.length;
+		if (is_target != rhs.is_target)
+		{
+			return is_target > rhs.is_target;
+		}
+		if (visited != rhs.visited)
+		{
+			return visited < rhs.visited;
+		}
+		if (length != rhs.length)
+		{
+			return length < rhs.length;
+		}
 		return reducability < rhs.reducability;
+	}
+	
+};
+
+template <class TIteration>
+class iterator
+{
+public:
+	TIteration start;
+	iterator(const TIteration& _start) : start(_start) {}
+
+	TIteration get_best()
+	{
+
+		return start;
 	}
 };
 
-
-
 int main()
 {
-	string floor("^^..^^");
-	char c = floor[2];
-	string blah;
-	blah += c;
-	if (c == '.')
-	{
-		cout << "yes: " << c << endl;
-		cout << blah << endl;
-	}
 	vector<iteration> its;
 	its.push_back(iteration("CRnCaSiRnBSiRnFArTiBPTiTiBFArPBCaSiThSiRnTiBPBPMgArCaSiRnTiMgArCaSiThCaSiRnFArRnSiRnFArTiTiBFArCaCaSiRnSiThCaCaSiRnMgArFYSiRnFYCaFArSiThCaSiThPBPTiMgArCaPRnSiAlArPBCaCaSiRnFYSiThCaRnFArArCaCaSiRnPBSiRnFArMgYCaCaCaCaSiThCaCaSiAlArCaCaSiRnPBSiAlArBCaCaCaCaSiThCaPBSiThPBPBCaSiRnFYFArSiThCaSiRnFArBCaCaSiRnFYFArSiThCaPBSiThCaSiRnPMgArRnFArPTiBCaPRnFArCaCaCaCaSiRnCaCaSiRnFYFArFArBCaSiThFArThSiThSiRnTiRnPMgArFArCaSiThCaPBCaSiRnBFArCaCaPRnCaCaPMgArSiRnFYFArCaSiThRnPBPMgAr"
 		, 0));
-
-	string s("ababab");
-	reduction r("ab", "cd");
-	//vector<string> r = get_replacements(s, &r);
-
-	/*
-	vector<c> vec;
-	vec.push_back(c(42 , "def"));
-	vec.push_back(c(42 , "abc"));
-	vec.push_back(c(715 , "abc"));
-	sort(vec.begin(), vec.end(), iThenS);
-	for (vector<c>::iterator it = vec.begin(); it != vec.end(); it++)
+	while (!its.begin()->is_target)
 	{
-		cout << (*it) << endl;
+		cout << its.begin()->desc.size() << ": " << its.begin()->desc.substr(0, 50) << endl;
+		const vector<iteration> newitems = its.begin()->expand();
+		its.insert(its.end(), newitems.begin(), newitems.end());
+		sort(its.begin(), its.end());
+		
 	}
-	cout << vec.size() << endl;
-	*/
+
+	cout << "Steps: " << its.begin()->depth << endl;
+
 	return 0;
 }
 
