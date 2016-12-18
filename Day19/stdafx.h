@@ -14,4 +14,4 @@
 #include <list>
 #include <iostream>
 #include <vector>
-
+#include "../puzzle_iterator.h"

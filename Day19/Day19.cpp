@@ -152,39 +152,28 @@ public:
 		}
 		return reducability < rhs.reducability;
 	}
-	
-};
 
-template <class TIteration>
-class iterator
-{
-public:
-	TIteration start;
-	iterator(const TIteration& _start) : start(_start) {}
-
-	TIteration get_best()
+	void print_answer()
 	{
-
-		return start;
+		cout << desc << ", Depth: " << depth << endl;
 	}
+
 };
+
+ostream& operator<<(ostream& os, const iteration& i)
+{
+	os << i.length << ": " << i.desc.substr(0, 50);
+	return os;
+}
+
 
 int main()
 {
-	vector<iteration> its;
-	its.push_back(iteration("CRnCaSiRnBSiRnFArTiBPTiTiBFArPBCaSiThSiRnTiBPBPMgArCaSiRnTiMgArCaSiThCaSiRnFArRnSiRnFArTiTiBFArCaCaSiRnSiThCaCaSiRnMgArFYSiRnFYCaFArSiThCaSiThPBPTiMgArCaPRnSiAlArPBCaCaSiRnFYSiThCaRnFArArCaCaSiRnPBSiRnFArMgYCaCaCaCaSiThCaCaSiAlArCaCaSiRnPBSiAlArBCaCaCaCaSiThCaPBSiThPBPBCaSiRnFYFArSiThCaSiRnFArBCaCaSiRnFYFArSiThCaPBSiThCaSiRnPMgArRnFArPTiBCaPRnFArCaCaCaCaSiRnCaCaSiRnFYFArFArBCaSiThFArThSiThSiRnTiRnPMgArFArCaSiThCaPBCaSiRnBFArCaCaPRnCaCaPMgArSiRnFYFArCaSiThRnPBPMgAr"
-		, 0));
-	while (!its.begin()->is_target)
-	{
-		cout << its.begin()->desc.size() << ": " << its.begin()->desc.substr(0, 50) << endl;
-		const vector<iteration> newitems = its.begin()->expand();
-		its.insert(its.end(), newitems.begin(), newitems.end());
-		sort(its.begin(), its.end());
-		
-	}
-
-	cout << "Steps: " << its.begin()->depth << endl;
-
+	iteration initial("CRnCaSiRnBSiRnFArTiBPTiTiBFArPBCaSiThSiRnTiBPBPMgArCaSiRnTiMgArCaSiThCaSiRnFArRnSiRnFArTiTiBFArCaCaSiRnSiThCaCaSiRnMgArFYSiRnFYCaFArSiThCaSiThPBPTiMgArCaPRnSiAlArPBCaCaSiRnFYSiThCaRnFArArCaCaSiRnPBSiRnFArMgYCaCaCaCaSiThCaCaSiAlArCaCaSiRnPBSiAlArBCaCaCaCaSiThCaPBSiThPBPBCaSiRnFYFArSiThCaSiRnFArBCaCaSiRnFYFArSiThCaPBSiThCaSiRnPMgArRnFArPTiBCaPRnFArCaCaCaCaSiRnCaCaSiRnFYFArFArBCaSiThFArThSiThSiRnTiRnPMgArFArCaSiThCaPBCaSiRnBFArCaCaPRnCaCaPMgArSiRnFYFArCaSiThRnPBPMgAr"
+		, 0);
+	puzzle_iterator<iteration> puzzle(initial);
+	iteration target = puzzle.get_best();
+	target.print_answer();
 	return 0;
 }
 
