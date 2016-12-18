@@ -111,33 +111,99 @@ const vector<string> get_replacements(const string& input, const reduction& r)
 	return replacements;
 }
 
+const int get_reducability(const string& input, const reduction& r)
+{
+	int reducability = 0;
+	size_t start = 0;
+	const size_t findsize = r.find.size();
+	for (size_t pos = input.find(r.find); pos < input.size(); pos = input.find(r.find, pos + 1))
+	{
+		reducability++;
+	}
+	return reducability;
+}
+
 class iteration
 {
 public:
 	const string desc;
+	const vector<string> expansions;
 	const int depth;
-	iteration(const string& _desc, const int _depth) : desc(_desc), depth(_depth) {}
-	const vector<iteration> expand()
+	const int length;
+	bool visited;
+	const int reducability;
+
+	static vector<string> get_expansions(const string& desc)
 	{
+		vector<string> retval;
 		vector<iteration> its;
 		for (vector<reduction>::const_iterator it = reductions.begin(); it != reductions.end(); it++)
 		{
 			const vector<string> replacements = get_replacements(desc, *it);
 			for (vector<string>::const_iterator r_it = replacements.begin(); r_it != replacements.end(); r_it++)
 			{
-				iteration i(*r_it, depth + 1);
-				its.push_back(i);
+				retval.push_back(*r_it);
 			}
+		}
+		return retval;
+	}
+
+
+	static int get_reducability_of_expansions(const vector<string>& expansions)
+	{
+		return 0;
+	}
+
+	iteration(const string& _desc, const int _depth, const bool _visited) : desc(_desc), depth(_depth), visited(_visited), 
+		length(desc.size()), expansions(get_expansions(_desc)), reducability(get_reducability_of_expansions(expansions)) {}
+
+	iteration(const string& _desc, const int _depth) : iteration(_desc, _depth, false) {}
+	const vector<iteration> expand()
+	{
+		vector<iteration> its;
+		for (vector<string>::const_iterator it = expansions.begin(); it != expansions.end(); it++)
+		{
+			iteration i(*it, depth + 1);
+			its.push_back(i);
 		}
 		return its;
 	}
+
+	const int get_my_reducability() const
+	{
+		int reducability = 0;
+		for (vector<reduction>::const_iterator it = reductions.begin(); it != reductions.end(); it++)
+		{
+			reducability += get_reducability(desc, *it);
+		}
+		return reducability;
+	}
+
 };
 
-
+bool compare(const iteration& lhs, const iteration& rhs) //return true if lhs is better
+{
+	if (lhs.length != rhs.length) return lhs.length < rhs.length;
+	int lhsreducability = lhs.get_my_reducability();
+	int rhsreducability = rhs.get_my_reducability();
+	return lhsreducability > rhsreducability;
+}
 
 int main()
 {
-	
+	string floor("^^..^^");
+	char c = floor[2];
+	string blah;
+	blah += c;
+	if (c == '.')
+	{
+		cout << "yes: " << c << endl;
+		cout << blah << endl;
+	}
+	vector<iteration> its;
+	its.push_back(iteration("CRnCaSiRnBSiRnFArTiBPTiTiBFArPBCaSiThSiRnTiBPBPMgArCaSiRnTiMgArCaSiThCaSiRnFArRnSiRnFArTiTiBFArCaCaSiRnSiThCaCaSiRnMgArFYSiRnFYCaFArSiThCaSiThPBPTiMgArCaPRnSiAlArPBCaCaSiRnFYSiThCaRnFArArCaCaSiRnPBSiRnFArMgYCaCaCaCaSiThCaCaSiAlArCaCaSiRnPBSiAlArBCaCaCaCaSiThCaPBSiThPBPBCaSiRnFYFArSiThCaSiRnFArBCaCaSiRnFYFArSiThCaPBSiThCaSiRnPMgArRnFArPTiBCaPRnFArCaCaCaCaSiRnCaCaSiRnFYFArFArBCaSiThFArThSiThSiRnTiRnPMgArFArCaSiThCaPBCaSiRnBFArCaCaPRnCaCaPMgArSiRnFYFArCaSiThRnPBPMgAr"
+		, 0));
+
 	string s("ababab");
 	reduction r("ab", "cd");
 	//vector<string> r = get_replacements(s, &r);
