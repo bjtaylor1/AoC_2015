@@ -13,9 +13,18 @@ public:
 		{
 			cout << *its.begin() << endl;
 			const vector<TIteration> newitems = its.begin()->expand();
+			if (!is_cyclic())
+			{
+				its.erase(its.begin());
+			}
 			its.insert(its.end(), newitems.begin(), newitems.end());
 			sort(its.begin(), its.end());
 		}
 		return *its.begin();
+	}
+
+	bool is_cyclic()
+	{
+		return true;
 	}
 };

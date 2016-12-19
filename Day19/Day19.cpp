@@ -166,12 +166,20 @@ ostream& operator<<(ostream& os, const iteration& i)
 	return os;
 }
 
+/*
+template <> bool puzzle_iterator<iteration>::is_cyclic()
+{
+	return true;
+}
+*/
 
 int main()
 {
 	iteration initial("CRnCaSiRnBSiRnFArTiBPTiTiBFArPBCaSiThSiRnTiBPBPMgArCaSiRnTiMgArCaSiThCaSiRnFArRnSiRnFArTiTiBFArCaCaSiRnSiThCaCaSiRnMgArFYSiRnFYCaFArSiThCaSiThPBPTiMgArCaPRnSiAlArPBCaCaSiRnFYSiThCaRnFArArCaCaSiRnPBSiRnFArMgYCaCaCaCaSiThCaCaSiAlArCaCaSiRnPBSiAlArBCaCaCaCaSiThCaPBSiThPBPBCaSiRnFYFArSiThCaSiRnFArBCaCaSiRnFYFArSiThCaPBSiThCaSiRnPMgArRnFArPTiBCaPRnFArCaCaCaCaSiRnCaCaSiRnFYFArFArBCaSiThFArThSiThSiRnTiRnPMgArFArCaSiThCaPBCaSiRnBFArCaCaPRnCaCaPMgArSiRnFYFArCaSiThRnPBPMgAr"
 		, 0);
+
 	puzzle_iterator<iteration> puzzle(initial);
+
 	iteration target = puzzle.get_best();
 	target.print_answer();
 	return 0;
